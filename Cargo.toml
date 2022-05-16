@@ -1,0 +1,5 @@
+[workspace]
+members = [
+  "bf_cli",
+  "bf_lib"
+]
