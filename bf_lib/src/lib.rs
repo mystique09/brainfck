@@ -13,7 +13,7 @@ pub struct BrainFuck {
 impl BrainFuck {
     pub fn new(src: String) -> Self {
         Self {
-            data: [0; 2].to_vec(),
+            data: [0; 3000].to_vec(),
             src: src.chars().collect::<Vec<char>>(),
             index: 0,
             mem_pos: 0,
@@ -25,13 +25,21 @@ impl BrainFuck {
     pub fn run(&mut self, token: &char) {
         match token {
             '+' => {
-                if (self.data.len()) <= self.mem_pos {
+                if self.data.len() <= self.mem_pos {
                     self.data.push(0);
                 }
                 self.data[self.mem_pos] += 1;
             }
             '-' => {
-                self.data[self.mem_pos] -= 1;
+                if self.data.len() == self.mem_pos {
+                    self.data.push(0);
+                }
+
+                if self.data[self.mem_pos] < 1 {
+                    self.data[self.mem_pos] = 1;
+                }
+
+                self.data[self.mem_pos] = (self.data[self.mem_pos] - 1) % self.data.len() as u32;
             }
             '>' => {
                 self.mem_pos += 1;
