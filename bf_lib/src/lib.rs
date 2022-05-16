@@ -1,3 +1,5 @@
+use std::io::{self};
+
 #[derive(Debug)]
 pub struct BrainFuck {
     pub data: Vec<u32>,
@@ -43,7 +45,20 @@ impl BrainFuck {
                 let ch = char::from_u32(self.data[self.mem_pos]).unwrap_or('\n');
                 self.result.push(ch);
             }
-            ',' => (),
+            ',' => {
+                let mut inp: String = String::new();
+                io::stdin().read_line(&mut inp).expect("Unable to readline");
+
+                let ch: char = inp.chars().nth(0).unwrap();
+
+                //println!("input {} bf {:?}", &ch, self.data);
+                //if ch.is_ascii() {
+                if self.data.len() == self.mem_pos {
+                    self.data.push(0);
+                }
+                self.data[self.mem_pos] = ch as u32;
+                //}
+            }
             '[' => {
                 self.check_point = self.index;
             }
@@ -108,7 +123,26 @@ mod tests {
         bf.exec();
 
         assert_eq!(bf.data, [101, 0].to_vec());
-        assert_eq!(bf.result, "He".to_string());
+        assert_eq!(bf.result, "He");
+    }
+
+    #[test]
+    fn test_input() {
+        let mut bf = BrainFuck::new(",.,.,.,.,.,.,.>,.,.,.<,.,.>,.".to_string());
+        bf.exec();
+
+        //println!("{:?}", bf);
+        //input: b e n - each input
+        assert!(!bf.result.is_empty());
+    }
+
+    #[test]
+    fn test_input_with_loop() {
+        let mut bf = BrainFuck::new(">,[>,]<[<]>[.>]".to_string());
+        bf.exec();
+
+        println!("{:?}", bf);
+        //assert!(!bf.result.is_empty());
     }
 
     #[test]
@@ -118,6 +152,6 @@ mod tests {
         let mut bf = BrainFuck::new(hello_world_test_file.trim().to_string());
         bf.exec();
 
-        assert_eq!("Hello, World!".to_string(), bf.result);
+        assert_eq!(bf.result, "Hello, World!");
     }
 }
