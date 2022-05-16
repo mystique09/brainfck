@@ -7,7 +7,6 @@ Usage:
 
 Option:
   -h Output this message.
-  -m Output the memory.
 "#;
 
 fn main() {
