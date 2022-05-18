@@ -20,7 +20,11 @@ fn main() {
                 let f = fs::read_to_string(n).expect("File not found");
                 let mut bf = BrainFuck::new(f.trim().to_string());
                 bf.exec();
-                println!("{}", bf.result);
+
+                let mem: Vec<&u32> = bf.data.iter().filter(|&n| *n != 0).collect::<Vec<&u32>>();
+
+                println!("Memory: {:?}", &mem);
+                println!("Output: {}", bf.result);
                 return;
             }
         },
