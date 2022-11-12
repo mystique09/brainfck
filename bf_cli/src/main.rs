@@ -1,7 +1,7 @@
 use bf_lib::BrainFuck;
 use std::fs;
 
-const HELP_MESSAGE: &'static str = r#"
+const HELP_MESSAGE: &str = r#"
 Usage:
   brainfck <option> <filename>
 
@@ -25,7 +25,6 @@ fn main() {
 
                 println!("Memory: {:?}", &mem);
                 println!("Output: {}", bf.result);
-                return;
             }
         },
         None => println!("{}", HELP_MESSAGE),
