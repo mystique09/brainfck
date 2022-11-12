@@ -1,6 +1,9 @@
 pub mod token;
 
-use std::io;
+use std::{
+    char,
+    io::{self, Write},
+};
 use token::Token;
 
 #[derive(Debug)]
@@ -56,25 +59,34 @@ impl BrainFuck {
     }
 
     fn movr(&mut self) {
+        if self.data.len() == self.mem_pos {
+            self.data.push(0);
+        }
         self.mem_pos += 1;
     }
 
     fn opt(&mut self) {
         let ch = char::from_u32(self.data[self.mem_pos]).unwrap_or('\r');
         self.result.push(ch);
+        print!("{}", ch);
     }
 
     fn inpt(&mut self) {
         let mut inp: String = String::new();
         io::stdin().read_line(&mut inp).expect("Unable to readline");
 
-        let ch: char = inp.chars().next().unwrap();
+        let chrs = inp.chars().collect::<Vec<char>>();
+        io::stdout().flush().unwrap();
 
-        if self.data.len() == self.mem_pos {
+        if self.mem_pos >= self.data.len() {
             self.data.push(0);
+            return;
         }
 
-        self.data[self.mem_pos] = ch as u32;
+        for chr in chrs {
+            self.data[self.mem_pos] = chr as u32;
+            self.movr();
+        }
     }
 
     fn sloop(&mut self) {
@@ -82,7 +94,10 @@ impl BrainFuck {
     }
 
     fn eloop(&mut self) {
-        if self.data[self.mem_pos] > 0 {
+        if self.mem_pos >= self.data.len() {
+            self.data.push(0);
+        }
+        if self.data[self.mem_pos] != 0 {
             self.index = self.check_point;
         }
     }
@@ -104,8 +119,8 @@ impl BrainFuck {
     pub fn exec(&mut self) {
         while self.index < self.src.len() {
             let token: Token = self.src[self.index];
-            self.parse(token);
             self.index += 1;
+            self.parse(token);
         }
     }
 }
