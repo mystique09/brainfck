@@ -3,7 +3,7 @@
 version = 3
 
 [[package]]
-name = "bf_cli"
+name = "bf"
 version = "0.1.0"
 dependencies = [
  "bf_lib",
