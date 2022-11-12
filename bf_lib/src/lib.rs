@@ -1,5 +1,7 @@
-use std::fmt::Display;
+pub mod token;
+
 use std::io;
+use token::Token;
 
 #[derive(Debug)]
 pub struct BrainFuck {
@@ -58,7 +60,7 @@ impl BrainFuck {
     }
 
     fn opt(&mut self) {
-        let ch = char::from_u32(self.data[self.mem_pos]).unwrap_or('\n');
+        let ch = char::from_u32(self.data[self.mem_pos]).unwrap_or('\r');
         self.result.push(ch);
     }
 
@@ -71,6 +73,7 @@ impl BrainFuck {
         if self.data.len() == self.mem_pos {
             self.data.push(0);
         }
+
         self.data[self.mem_pos] = ch as u32;
     }
 
@@ -103,52 +106,6 @@ impl BrainFuck {
             let token: Token = self.src[self.index];
             self.parse(token);
             self.index += 1;
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Token {
-    INCR,
-    DECR,
-    MOVR,
-    MOVL,
-    SLOOP,
-    ELOOP,
-    INPT,
-    OPT,
-    NONE,
-}
-
-impl From<&char> for Token {
-    fn from(c: &char) -> Self {
-        match c {
-            '+' => Self::INCR,
-            '-' => Self::DECR,
-            '>' => Self::MOVR,
-            '<' => Self::MOVL,
-            '[' => Self::SLOOP,
-            ']' => Self::ELOOP,
-            ',' => Self::INPT,
-            '.' => Self::OPT,
-            ' ' | '\n' | '\t' | '\r' => Self::NONE,
-            _ => panic!("INVALID TOKEN: {}", c),
-        }
-    }
-}
-
-impl Display for Token {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::INCR => write!(f, "+"),
-            Self::DECR => write!(f, "-"),
-            Self::MOVR => write!(f, ">"),
-            Self::MOVL => write!(f, "<"),
-            Self::SLOOP => write!(f, "["),
-            Self::ELOOP => write!(f, "]"),
-            Self::INPT => write!(f, ","),
-            Self::OPT => write!(f, "."),
-            Self::NONE => write!(f, ""),
         }
     }
 }
