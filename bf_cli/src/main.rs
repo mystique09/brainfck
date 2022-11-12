@@ -22,9 +22,7 @@ fn main() {
                 bf.exec();
 
                 let mem: Vec<&u32> = bf.data.iter().filter(|&n| *n != 0).collect::<Vec<&u32>>();
-
-                println!("Memory: {:?}", &mem);
-                println!("Output: {}", bf.result);
+                println!("\nMemory: {:?}", &mem);
             }
         },
         None => println!("{}", HELP_MESSAGE),
