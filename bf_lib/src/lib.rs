@@ -1,9 +1,10 @@
-use std::io::{self};
+use std::fmt::Display;
+use std::io;
 
 #[derive(Debug)]
 pub struct BrainFuck {
     pub data: Vec<u32>,
-    pub src: Vec<char>,
+    pub src: Vec<Token>,
     pub index: usize,
     pub mem_pos: usize,
     pub check_point: usize,
@@ -14,7 +15,12 @@ impl BrainFuck {
     pub fn new(src: String) -> Self {
         Self {
             data: [0; 3000].to_vec(),
-            src: src.chars().collect::<Vec<char>>(),
+            src: src
+                .chars()
+                .collect::<Vec<char>>()
+                .iter()
+                .map(Token::from)
+                .collect::<Vec<Token>>(),
             index: 0,
             mem_pos: 0,
             check_point: 0,
@@ -22,81 +28,133 @@ impl BrainFuck {
         }
     }
 
-    pub fn run(&mut self, token: &char) {
+    fn incr(&mut self) {
+        if self.data.len() <= self.mem_pos {
+            self.data.push(0);
+        }
+        self.data[self.mem_pos] += 1;
+    }
+
+    fn decr(&mut self) {
+        if self.data.len() == self.mem_pos {
+            self.data.push(0);
+        }
+
+        if self.data[self.mem_pos] < 1 {
+            self.data[self.mem_pos] = 1;
+        }
+
+        self.data[self.mem_pos] -= 1;
+    }
+
+    fn movl(&mut self) {
+        if self.mem_pos > 0 {
+            self.mem_pos -= 1;
+        }
+    }
+
+    fn movr(&mut self) {
+        self.mem_pos += 1;
+    }
+
+    fn opt(&mut self) {
+        let ch = char::from_u32(self.data[self.mem_pos]).unwrap_or('\n');
+        self.result.push(ch);
+    }
+
+    fn inpt(&mut self) {
+        let mut inp: String = String::new();
+        io::stdin().read_line(&mut inp).expect("Unable to readline");
+
+        let ch: char = inp.chars().next().unwrap();
+
+        if self.data.len() == self.mem_pos {
+            self.data.push(0);
+        }
+        self.data[self.mem_pos] = ch as u32;
+    }
+
+    fn sloop(&mut self) {
+        self.check_point = self.index;
+    }
+
+    fn eloop(&mut self) {
+        if self.data[self.mem_pos] > 0 {
+            self.index = self.check_point;
+        }
+    }
+
+    pub fn parse(&mut self, token: Token) {
         match token {
-            '+' => {
-                if self.data.len() <= self.mem_pos {
-                    self.data.push(0);
-                }
-                self.data[self.mem_pos] += 1;
-            }
-            '-' => {
-                if self.data.len() == self.mem_pos {
-                    self.data.push(0);
-                }
-
-                if self.data[self.mem_pos] < 1 {
-                    self.data[self.mem_pos] = 1;
-                }
-
-                self.data[self.mem_pos] = (self.data[self.mem_pos] - 1) % self.data.len() as u32;
-            }
-            '>' => {
-                self.mem_pos += 1;
-            }
-            '<' => {
-                if self.mem_pos > 0 {
-                    self.mem_pos -= 1;
-                }
-            }
-            '.' => {
-                let ch = char::from_u32(self.data[self.mem_pos]).unwrap_or('\n');
-                self.result.push(ch);
-            }
-            ',' => {
-                let mut inp: String = String::new();
-                io::stdin().read_line(&mut inp).expect("Unable to readline");
-
-                let ch: char = inp.chars().nth(0).unwrap();
-
-                //println!("input {} bf {:?}", &ch, self.data);
-                //if ch.is_ascii() {
-                if self.data.len() == self.mem_pos {
-                    self.data.push(0);
-                }
-                self.data[self.mem_pos] = ch as u32;
-                //}
-            }
-            '[' => {
-                self.check_point = self.index;
-            }
-            ']' => {
-                if self.data[self.mem_pos] > 0 {
-                    self.index = self.check_point;
-                }
-            }
-            '\n' | '\r' | '\t' => (),
-            _ => panic!(
-                "ERROR: Invalid character '{}' at position {}",
-                self.src[self.index], self.index
-            ),
+            Token::INCR => self.incr(),
+            Token::DECR => self.decr(),
+            Token::MOVR => self.movr(),
+            Token::MOVL => self.movl(),
+            Token::OPT => self.opt(),
+            Token::INPT => self.inpt(),
+            Token::SLOOP => self.sloop(),
+            Token::ELOOP => self.eloop(),
+            Token::NONE => (),
         }
     }
 
     pub fn exec(&mut self) {
         while self.index < self.src.len() {
-            let token: char = self.src[self.index];
-
-            self.run(&token);
+            let token: Token = self.src[self.index];
+            self.parse(token);
             self.index += 1;
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Token {
+    INCR,
+    DECR,
+    MOVR,
+    MOVL,
+    SLOOP,
+    ELOOP,
+    INPT,
+    OPT,
+    NONE,
+}
+
+impl From<&char> for Token {
+    fn from(c: &char) -> Self {
+        match c {
+            '+' => Self::INCR,
+            '-' => Self::DECR,
+            '>' => Self::MOVR,
+            '<' => Self::MOVL,
+            '[' => Self::SLOOP,
+            ']' => Self::ELOOP,
+            ',' => Self::INPT,
+            '.' => Self::OPT,
+            ' ' | '\n' | '\t' | '\r' => Self::NONE,
+            _ => panic!("INVALID TOKEN: {}", c),
+        }
+    }
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::INCR => write!(f, "+"),
+            Self::DECR => write!(f, "-"),
+            Self::MOVR => write!(f, ">"),
+            Self::MOVL => write!(f, "<"),
+            Self::SLOOP => write!(f, "["),
+            Self::ELOOP => write!(f, "]"),
+            Self::INPT => write!(f, ","),
+            Self::OPT => write!(f, "."),
+            Self::NONE => write!(f, ""),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
     use super::*;
 
     #[test]
@@ -104,62 +162,7 @@ mod tests {
         let mut bf = BrainFuck::new(">++++++++<.".to_string());
 
         bf.exec();
-        assert_eq!(bf.data, [0, 8].to_vec());
+        assert_eq!(bf.data[1], 8);
         assert!(!bf.src.is_empty());
-    }
-
-    #[test]
-    fn test_output_data() {
-        let mut bf = BrainFuck::new(">++++++++<.".to_string());
-        bf.exec();
-
-        assert_eq!(bf.data, [0, 8].to_vec());
-    }
-
-    #[test]
-    fn test_loop() {
-        let mut bf = BrainFuck::new(">++++++++[<+++++++++>-]+.".to_string());
-        bf.exec();
-
-        assert_eq!(bf.data, [72, 1].to_vec());
-    }
-
-    #[test]
-    fn test_loop_2() {
-        // --output: [101, 0] | [101, 0]
-        let mut bf = BrainFuck::new(">++++++++[<+++++++++>-]<.>++++[<+++++++>-]<+.".to_string());
-        bf.exec();
-
-        assert_eq!(bf.data, [101, 0].to_vec());
-        assert_eq!(bf.result, "He");
-    }
-
-    #[test]
-    fn test_input() {
-        let mut bf = BrainFuck::new(",.,.,.,.,.,.,.>,.,.,.<,.,.>,.".to_string());
-        bf.exec();
-
-        //println!("{:?}", bf);
-        //input: b e n - each input
-        assert!(!bf.result.is_empty());
-    }
-
-    #[test]
-    fn test_input_with_loop() {
-        let mut bf = BrainFuck::new(">,[>,]<[<]>[.>]".to_string());
-        bf.exec();
-
-        println!("{:?}", bf);
-        //assert!(!bf.result.is_empty());
-    }
-
-    #[test]
-    fn test_hello_world() {
-        let hello_world_test_file =
-            fs::read_to_string("examples/hello_world.txt").expect("test file not found");
-        let mut bf = BrainFuck::new(hello_world_test_file.trim().to_string());
-        bf.exec();
-
-        assert_eq!(bf.result, "Hello, World!");
     }
 }
