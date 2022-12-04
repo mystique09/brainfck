@@ -12,7 +12,7 @@ pub struct BrainFuck {
     pub src: Vec<Token>,
     pub index: usize,
     pub mem_pos: usize,
-    pub check_point: usize,
+    pub check_point: Vec<u32>,
     pub result: String,
 }
 
@@ -28,7 +28,7 @@ impl BrainFuck {
                 .collect::<Vec<Token>>(),
             index: 0,
             mem_pos: 0,
-            check_point: 0,
+            check_point: Vec::new(),
             result: String::new(),
         }
     }
@@ -90,15 +90,26 @@ impl BrainFuck {
     }
 
     fn sloop(&mut self) {
-        self.check_point = self.index;
+        let mut stack = Vec::new();
+        stack.push(self.index as u32 - 1);
+        // Store the stack in the `check_point` variable
+        self.check_point = stack;
     }
 
     fn eloop(&mut self) {
         if self.mem_pos >= self.data.len() {
             self.data.push(0);
         }
+
         if self.data[self.mem_pos] != 0 {
-            self.index = self.check_point;
+            // If the current memory cell is not zero, pop the top item from the stack
+            let check_point = match self.check_point.pop() {
+                Some(n) => n,
+                None => panic!("Missing loop pair at: {}", self.index),
+            };
+
+            // Use the popped value to jump back to the corresponding `[` character and continue execution from there
+            self.index = check_point as usize;
         }
     }
 
