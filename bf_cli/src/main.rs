@@ -18,11 +18,10 @@ fn main() {
             "-h" => println!("{}", HELP_MESSAGE),
             _ => {
                 let f = fs::read_to_string(n).expect("File not found");
-                let mut bf = BrainFuck::new(f.trim().to_string());
+                let f = f.trim().replace(['\n', ' '], "");
+                let mut bf = BrainFuck::new(f);
                 bf.exec();
-
-                let mem: Vec<&u32> = bf.data.iter().filter(|&n| *n != 0).collect::<Vec<&u32>>();
-                println!("\nMemory: {:?}", &mem);
+                // println!("{}", bf.result);
             }
         },
         None => println!("{}", HELP_MESSAGE),
