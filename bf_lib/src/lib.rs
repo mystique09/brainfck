@@ -1,72 +1,79 @@
-pub mod token;
+use std::{char, collections::VecDeque, io};
 
-use std::{
-    char,
-    io::{self, Write},
-};
-use token::Token;
+const MAX_MEMORY: usize = 30000;
 
 #[derive(Debug)]
 pub struct BrainFuck {
     pub data: Vec<u32>,
-    pub src: Vec<Token>,
+    pub src: Vec<char>,
     pub index: usize,
-    pub mem_pos: usize,
-    pub check_point: Vec<u32>,
+    pub pointer: u32,
+    pub check_point: VecDeque<usize>,
     pub result: String,
 }
 
 impl BrainFuck {
     pub fn new(src: String) -> Self {
+        let src = src.chars().collect::<Vec<char>>();
+        let deq: VecDeque<usize> = VecDeque::new();
+
         Self {
-            data: [0; 3000].to_vec(),
-            src: src
-                .chars()
-                .collect::<Vec<char>>()
-                .iter()
-                .map(Token::from)
-                .collect::<Vec<Token>>(),
+            data: vec![0; MAX_MEMORY],
+            src,
             index: 0,
-            mem_pos: 0,
-            check_point: Vec::new(),
+            pointer: 0,
+            check_point: deq,
             result: String::new(),
         }
     }
 
     fn incr(&mut self) {
-        if self.data.len() <= self.mem_pos {
+        // let sub = if self.pointer > 0 {
+        //     self.pointer - 1
+        // } else {
+        //     self.pointer
+        // };
+
+        if self.pointer == self.data.len() as u32 {
             self.data.push(0);
+            return;
         }
-        self.data[self.mem_pos] += 1;
+
+        self.data[self.pointer as usize] += 1;
     }
 
     fn decr(&mut self) {
-        if self.data.len() == self.mem_pos {
-            self.data.push(0);
+        if self.data[self.pointer as usize] == 0 {
+            return;
         }
 
-        if self.data[self.mem_pos] < 1 {
-            self.data[self.mem_pos] = 1;
-        }
-
-        self.data[self.mem_pos] -= 1;
+        self.data[self.pointer as usize] = self.data[self.pointer as usize].wrapping_sub(1);
     }
 
     fn movl(&mut self) {
-        if self.mem_pos > 0 {
-            self.mem_pos -= 1;
+        if self.pointer == 0 {
+            return;
         }
+
+        // Use wrapping_sub to handle underflow
+        self.pointer = self.pointer.wrapping_sub(1);
     }
 
     fn movr(&mut self) {
-        if self.data.len() == self.mem_pos {
+        if self.pointer == self.data.len() as u32 {
             self.data.push(0);
+            return;
         }
-        self.mem_pos += 1;
+        // Use wrapping_add to handle overflow
+        self.pointer = self.pointer.wrapping_add(1);
     }
 
     fn opt(&mut self) {
-        let ch = char::from_u32(self.data[self.mem_pos]).unwrap_or('\r');
+        if self.pointer == self.data.len() as u32 {
+            return;
+        }
+        // Use unwrap_or_else to handle conversion failure without panicking
+        let ch = char::from_u32(self.data[self.pointer as usize] as u32).unwrap_or('\0');
         self.result.push(ch);
         print!("{}", ch);
     }
@@ -75,63 +82,67 @@ impl BrainFuck {
         let mut inp: String = String::new();
         io::stdin().read_line(&mut inp).expect("Unable to readline");
 
-        let chrs = inp.chars().collect::<Vec<char>>();
-        io::stdout().flush().unwrap();
-
-        if self.mem_pos >= self.data.len() {
-            self.data.push(0);
-            return;
-        }
-
-        for chr in chrs {
-            self.data[self.mem_pos] = chr as u32;
+        // Use the value of `inp` here
+        for chr in inp.chars() {
+            self.data[self.pointer as usize] = chr as u32;
             self.movr();
         }
     }
 
     fn sloop(&mut self) {
-        let mut stack = Vec::new();
-        stack.push(self.index as u32 - 1);
-        // Store the stack in the `check_point` variable
-        self.check_point = stack;
+        let i = if self.index == 0 { 0 } else { self.index - 1 };
+        self.check_point.push_front(i);
     }
 
     fn eloop(&mut self) {
-        if self.mem_pos >= self.data.len() {
+        // Check if the memory position is out of bounds
+        if self.pointer == self.data.len() as u32 {
             self.data.push(0);
         }
 
-        if self.data[self.mem_pos] != 0 {
-            // If the current memory cell is not zero, pop the top item from the stack
-            let check_point = match self.check_point.pop() {
-                Some(n) => n,
-                None => panic!("Missing loop pair at: {}", self.index),
-            };
+        let cell = self.data.get(self.pointer as usize).unwrap();
 
-            // Use the popped value to jump back to the corresponding `[` character and continue execution from there
-            self.index = check_point as usize;
+        if *cell > 0 {
+            // println!(
+            //     "total checkpoint before popping front element: {:?}",
+            //     self.check_point.len()
+            // );
+            // If the current memory cell is not zero, pop the top item from the queue
+            let check_point = self.check_point.get(0).unwrap();
+            // Set the index to the popped value
+            // println!(
+            //     "total checkpoint after popping front element {:?}",
+            //     self.check_point.len()
+            // );
+            // self.check_point.remove(0);
+            self.index = *check_point;
         }
+
+        self.check_point.remove(0);
     }
 
-    pub fn parse(&mut self, token: Token) {
+    pub fn process(&mut self, token: char) {
         match token {
-            Token::INCR => self.incr(),
-            Token::DECR => self.decr(),
-            Token::MOVR => self.movr(),
-            Token::MOVL => self.movl(),
-            Token::OPT => self.opt(),
-            Token::INPT => self.inpt(),
-            Token::SLOOP => self.sloop(),
-            Token::ELOOP => self.eloop(),
-            Token::NONE => (),
+            '+' => self.incr(),
+            '-' => self.decr(),
+            '>' => self.movr(),
+            '<' => self.movl(),
+            '.' => self.opt(),
+            ',' => self.inpt(),
+            '[' => self.sloop(),
+            ']' => self.eloop(),
+            _ => println!("Token: {}", token),
         }
     }
 
     pub fn exec(&mut self) {
         while self.index < self.src.len() {
-            let token: Token = self.src[self.index];
+            let token: char = self.src[self.index];
+            self.process(token);
             self.index += 1;
-            self.parse(token);
+            // println!("{:?}, {:?}", self.pointer, self.data[self.pointer as usize]);
+            // println!("{:?}, {:?}", self.index, self.src[self.index - 1 as usize]);
+            // print!("{esc}c", esc = 27 as char);
         }
     }
 }
